@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Uploads (log files)
+backend/uploads/
+
+# Build output
+frontend/dist/
+frontend/build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# ML Model weights (large files)
+ai-service/*.pkl
+ai-service/*.h5
+ai-service/*.pt
+ai-service/models/
+
+# Python virtual env
+ai-service/venv/
+ai-service/.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# ─── AI-SERVICE specific ───────────────────────────
+
+# Python cache inside ai-service
+ai-service/__pycache__/
+ai-service/app/__pycache__/
+ai-service/app/services/__pycache__/
+
+# pyvenv config (auto-generated)
+ai-service/pyvenv.cfg
+
+# Jupyter notebooks checkpoints
+ai-service/.ipynb_checkpoints/
+
+# Trained model artifacts
+ai-service/*.pkl
+ai-service/*.h5
+ai-service/*.pt
+ai-service/*.onnx
+ai-service/app/models/weights/
+
+# Test & coverage
+ai-service/.pytest_cache/
+ai-service/htmlcov/
+ai-service/.coverage
