@@ -1,7 +1,8 @@
 
 import axios from "axios";
 
-const AI_URL = "http://localhost:8001/analyze";
+// const AI_URL = "http://127.0.0.1:8000/analyze-simple";
+const AI_URL = "http://127.0.0.1:8000/analyze";
 
 // Retry logic
 async function analyzeWithRetry(logs, retries = 3, delay = 1000) {
@@ -23,7 +24,27 @@ async function analyzeWithRetry(logs, retries = 3, delay = 1000) {
     }
   }
 }
+export const analyzeLogs = async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const logs = await Log.find({ fileId }).limit(100);
 
+    if (!logs.length) return res.status(404).json({ msg: "No logs found" });
+
+    const formatted = logs.map(l => ({
+      ip: l.ip || "unknown",
+      endpoint: l.endpoint || "unknown",
+      severity: l.severity || "INFO",
+      message: l.message || ""
+    }));
+
+    const result = await analyzeWithRetry(formatted);
+    res.json({ success: true, ai: result });
+
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 export { analyzeWithRetry };
 
 

@@ -1,7 +1,8 @@
 import LogFile from "../models/LogFile.model.js";
 import { parseLogFile, extractMetadata } from "../utilis/parseLog.js";
+import { analyzeWithRetry } from "../services/ai.service.js";
 import Log from "../models/log.model.js";
-// import { analyzeWithAI } from "../services/ai.service.js";
+
 
 
 // Upload log
@@ -76,6 +77,29 @@ export const getFileStatus = async (req, res) => {
     totalLines: file.totalLines,
     parsedLines: file.parsedLines
   });
+};
+
+
+export const analyzeLogs = async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const logs = await Log.find({ fileId }).limit(100);
+
+    if (!logs.length) return res.status(404).json({ msg: "No logs found" });
+
+    const formatted = logs.map(l => ({
+      ip: l.ip || "unknown",
+      endpoint: l.endpoint || "unknown",
+      severity: l.severity || "INFO",
+      message: l.message || ""
+    }));
+
+    const result = await analyzeWithRetry(formatted);
+    res.json({ success: true, ai: result });
+
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 

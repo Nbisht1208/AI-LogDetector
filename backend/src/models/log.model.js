@@ -2,11 +2,11 @@ import mongoose from "mongoose";
 
 const LogSchema = new mongoose.Schema({
   fileId: mongoose.Schema.Types.ObjectId,
-  timestamp: { type: Date, index: true },
-  severity: { type: String, index: true },  
-  ip: { type: String, index: true },
+  timestamp: { type: Date,  },
+  severity: { type: String,  },  
+  ip: { type: String,  },
   user: { type: String },
-  endpoint: { type: String, index: true },
+  endpoint: { type: String,  },
   message: String,
   rawLine: String
 }, { timestamps: true });

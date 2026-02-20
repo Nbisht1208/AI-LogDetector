@@ -4,6 +4,7 @@ import re
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
+from .preprocess import normalize_log
 
 # ============ CONFIGURATION ============
 BRUTE_FORCE_THRESHOLD = 5
@@ -147,10 +148,7 @@ def detect_anomaly(logs):
         ]
     
     # Prepare messages for ML
-    messages = [
-        f"{log['ip']} {log['endpoint']} {log['severity']} {log['message']}"
-        for log in logs
-    ]
+    messages = [normalize_log(log) for log in logs]
     
     # ML detection
     X = vectorizer.transform(messages)
@@ -207,10 +205,7 @@ def detect_anomaly_detailed(logs):
             for log in logs
         ]
     
-    messages = [
-        f"{log['ip']} {log['endpoint']} {log['severity']} {log['message']}"
-        for log in logs
-    ]
+    messages = [normalize_log(log) for log in logs]
     
     X = vectorizer.transform(messages)
     preds = model.predict(X)
