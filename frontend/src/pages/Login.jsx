@@ -58,13 +58,13 @@ const Login = () => {
       const { user, token } = res.data;
 
       // store token in sessionStorage (or context)
-      sessionStorage.setItem("token", token);
-      sessionStorage.setItem("user", JSON.stringify(user))
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
 
       // TODO: replace with navigate('/dashboard') etc.
       alert("Login successful!");
       console.log('LOGIN TOKEN:', token);
-      console.log('SESSION STORAGE TOKEN:', sessionStorage.getItem('token'));
+      console.log('SESSION STORAGE TOKEN:', localStorage.getItem('token'));
 
       navigate("/");
     } catch (err) {

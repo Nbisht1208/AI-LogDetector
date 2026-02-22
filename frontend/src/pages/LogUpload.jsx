@@ -1,23 +1,24 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { Upload, File, CheckCircle, XCircle, AlertCircle, Loader, ArrowLeft, FileText, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const LogUpload = () => {
+  const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState('idle'); // idle, uploading, uploaded, parsing, success, error
+  const [uploadStatus, setUploadStatus] = useState('idle');
   const [fileId, setFileId] = useState(null);
   const [parseProgress, setParseProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [parsedData, setParsedData] = useState(null);
   const fileInputRef = useRef(null);
-  
+
   const allowedTypes = ['.log', '.txt', '.csv'];
-  const maxFileSize = 50 * 1024 * 1024; // 50MB
-  
-  // Check file validity
-  const token = sessionStorage.getItem('token');
+  const maxFileSize = 50 * 1024 * 1024;
+  const token = localStorage.getItem('token');
+
   const isValidFile = (file) => {
     const extension = '.' + file.name.split('.').pop().toLowerCase();
     if (!allowedTypes.includes(extension)) {
@@ -31,7 +32,6 @@ const LogUpload = () => {
     return true;
   };
 
-  // Handle file selection
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file && isValidFile(file)) {
@@ -41,7 +41,6 @@ const LogUpload = () => {
     }
   };
 
-  // Handle drag and drop
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -55,7 +54,6 @@ const LogUpload = () => {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-
     const file = e.dataTransfer.files[0];
     if (file && isValidFile(file)) {
       setSelectedFile(file);
@@ -64,10 +62,8 @@ const LogUpload = () => {
     }
   };
 
-  // Simulate file upload
   const handleUpload = async () => {
     if (!selectedFile) return;
-
     setUploadStatus('uploading');
     setErrorMessage('');
 
@@ -75,12 +71,10 @@ const LogUpload = () => {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      // Real API call
       const response = await axios.post('http://localhost:5000/api/v1/logs/upload', formData, {
-      
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}` // your JWT later
+          'Authorization': `Bearer ${token}`
         },
         onUploadProgress: (progressEvent) => {
           const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
@@ -93,64 +87,78 @@ const LogUpload = () => {
     } catch (error) {
       setUploadStatus('error');
       setErrorMessage(error.response?.data?.msg || 'Upload failed. Please try again.');
-      console.error('Upload error:', error);
     }
   };
 
-  // Parse uploaded file
   const handleParse = async () => {
     if (!fileId) return;
-
     setUploadStatus('parsing');
     setParseProgress(0);
     setErrorMessage('');
 
     try {
-      
-      // Start parsing
       await axios.post(`http://localhost:5000/api/v1/logs/parse/${fileId}`, {}, {
-        headers: {
-          'Authorization':  `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      // Poll status
       const pollStatus = async () => {
         try {
-          
           const response = await axios.get(`http://localhost:5000/api/v1/logs/file-status/${fileId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
           });
 
           const status = response.data;
           setParseProgress(Math.round((status.parsedLines / status.totalLines || 0) * 100));
 
           if (status.status === 'completed') {
+            // Real stats fetch karo
+            const statsRes = await axios.get(
+              'http://localhost:5000/api/v1/stats/severity',
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            const severityStats = statsRes.data;
+            const errors = severityStats.find(s => s._id === "ERROR")?.count || 0;
+            const warnings = severityStats.find(s => s._id === "WARN")?.count || 0;
+            const info = severityStats.find(s => s._id === "INFO")?.count || 0;
+
             setParsedData({
               totalLines: status.totalLines,
-              errors: 342, // TODO: get from backend aggregation
-              warnings: 1205,
-              info: status.totalLines - 1547
+              errors,
+              warnings,
+              info
             });
+
+            // Auto AI Analysis
+            try {
+              await axios.post(
+                `http://localhost:5000/api/v1/logs/analyze/${fileId}`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              console.log("AI Analysis complete — alerts created!");
+            } catch (err) {
+              console.error("AI Analysis failed:", err);
+            }
+
             setUploadStatus('success');
+
           } else if (status.status === 'parsing') {
             setTimeout(pollStatus, 1500);
           }
         } catch (error) {
-          console.error('Status poll:', error);
+          console.error('Status poll error:', error);
         }
       };
 
       pollStatus();
+
     } catch (error) {
       setUploadStatus('error');
       setErrorMessage(error.response?.data?.msg || 'Parsing failed. Please try again.');
     }
   };
 
-  // Reset form
   const handleReset = () => {
     setSelectedFile(null);
     setUploadProgress(0);
@@ -164,12 +172,10 @@ const LogUpload = () => {
     }
   };
 
-  // Navigate back to dashboard
   const handleBackToDashboard = () => {
-    alert('Navigating to Dashboard...');
+    navigate('/');
   };
 
-  // Format file size
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -205,8 +211,8 @@ const LogUpload = () => {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={`border-3 border-dashed rounded-xl p-8 sm:p-12 text-center transition-all duration-300 ${isDragging
-                    ? 'border-blue-500 bg-blue-50 scale-105'
-                    : 'border-blue-300 bg-blue-50/50 hover:border-blue-400 hover:bg-blue-50'
+                  ? 'border-blue-500 bg-blue-50 scale-105'
+                  : 'border-blue-300 bg-blue-50/50 hover:border-blue-400 hover:bg-blue-50'
                   }`}
               >
                 <div className="flex flex-col items-center">
@@ -237,7 +243,7 @@ const LogUpload = () => {
               </div>
             )}
 
-            {/* Selected File Display */}
+            {/* Selected File */}
             {selectedFile && uploadStatus === 'idle' && (
               <div className="mt-6">
                 <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -250,17 +256,13 @@ const LogUpload = () => {
                       <p className="text-sm text-blue-600">{formatFileSize(selectedFile.size)}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleReset}
-                    className="ml-2 p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200"
-                  >
+                  <button onClick={handleReset} className="ml-2 p-2 text-blue-600 hover:bg-blue-100 rounded-lg">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-
                 <button
                   onClick={handleUpload}
-                  className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 shadow-md flex items-center justify-center gap-2"
                 >
                   <Upload className="w-5 h-5" />
                   Upload File
@@ -279,16 +281,13 @@ const LogUpload = () => {
                   </div>
                 </div>
                 <div className="w-full bg-blue-100 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-blue-600 to-cyan-600 h-3 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${uploadProgress}%` }}
-                  ></div>
+                  <div className="bg-gradient-to-r from-blue-600 to-cyan-600 h-3 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
                 </div>
                 <p className="text-center text-sm font-medium text-blue-600">{uploadProgress}%</p>
               </div>
             )}
 
-            {/* Upload Success - Ready to Parse */}
+            {/* Uploaded - Ready to Parse */}
             {uploadStatus === 'uploaded' && (
               <div className="space-y-4">
                 <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
@@ -298,13 +297,12 @@ const LogUpload = () => {
                     <p className="text-sm text-green-700">{selectedFile?.name}</p>
                   </div>
                 </div>
-
                 <button
                   onClick={handleParse}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md flex items-center justify-center gap-2"
                 >
                   <File className="w-5 h-5" />
-                  Parse File
+                  Parse & Analyze File
                 </button>
               </div>
             )}
@@ -315,32 +313,28 @@ const LogUpload = () => {
                 <div className="flex items-center gap-3">
                   <Loader className="w-6 h-6 text-cyan-600 animate-spin" />
                   <div className="flex-1">
-                    <p className="font-medium text-blue-900">Parsing file...</p>
-                    <p className="text-sm text-blue-600">Analyzing log entries</p>
+                    <p className="font-medium text-blue-900">Parsing & Analyzing with AI...</p>
+                    <p className="text-sm text-blue-600">Please wait...</p>
                   </div>
                 </div>
                 <div className="w-full bg-cyan-100 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-cyan-600 to-blue-600 h-3 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${parseProgress}%` }}
-                  ></div>
+                  <div className="bg-gradient-to-r from-cyan-600 to-blue-600 h-3 rounded-full transition-all duration-300" style={{ width: `${parseProgress}%` }}></div>
                 </div>
                 <p className="text-center text-sm font-medium text-cyan-600">Parsing {parseProgress}%</p>
               </div>
             )}
 
-            {/* Success with Parsed Data */}
+            {/* Success */}
             {uploadStatus === 'success' && parsedData && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
                   <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="font-bold text-green-900">Success! File Parsed Successfully</p>
-                    <p className="text-sm text-green-700">{selectedFile?.name}</p>
+                    <p className="font-bold text-green-900">✅ Parsed & AI Analysis Complete!</p>
+                    <p className="text-sm text-green-700">{selectedFile?.name} — Check Alerts page for threats</p>
                   </div>
                 </div>
 
-                {/* Parsed Data Summary */}
                 <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl p-6 text-white">
                   <h3 className="text-xl font-bold mb-4">Parsed Data Summary</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -366,7 +360,7 @@ const LogUpload = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={handleBackToDashboard}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 shadow-md"
                   >
                     View Dashboard
                   </button>
@@ -380,7 +374,7 @@ const LogUpload = () => {
               </div>
             )}
 
-            {/* Error Display */}
+            {/* Error */}
             {uploadStatus === 'error' && errorMessage && (
               <div className="space-y-4">
                 <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg border border-red-200">
@@ -390,16 +384,12 @@ const LogUpload = () => {
                     <p className="text-sm text-red-700">{errorMessage}</p>
                   </div>
                 </div>
-                <button
-                  onClick={handleReset}
-                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all duration-200"
-                >
+                <button onClick={handleReset} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all duration-200">
                   Try Again
                 </button>
               </div>
             )}
 
-            {/* Error Message (validation) */}
             {errorMessage && uploadStatus === 'idle' && !selectedFile && (
               <div className="mt-4 flex items-center gap-3 p-4 bg-red-50 rounded-lg border border-red-200">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
@@ -413,29 +403,21 @@ const LogUpload = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-lg shadow-md p-4 border border-blue-100">
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-blue-100 rounded">
-                <FileText className="w-5 h-5 text-blue-600" />
-              </div>
+              <div className="p-2 bg-blue-100 rounded"><FileText className="w-5 h-5 text-blue-600" /></div>
               <h3 className="font-semibold text-blue-900">Supported Formats</h3>
             </div>
             <p className="text-sm text-gray-600">.log, .txt, .csv files up to 50MB</p>
           </div>
-
           <div className="bg-white rounded-lg shadow-md p-4 border border-blue-100">
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-cyan-100 rounded">
-                <CheckCircle className="w-5 h-5 text-cyan-600" />
-              </div>
-              <h3 className="font-semibold text-blue-900">Auto-Parse</h3>
+              <div className="p-2 bg-cyan-100 rounded"><CheckCircle className="w-5 h-5 text-cyan-600" /></div>
+              <h3 className="font-semibold text-blue-900">Auto AI Analysis</h3>
             </div>
-            <p className="text-sm text-gray-600">Automatic error & warning detection</p>
+            <p className="text-sm text-gray-600">Automatic threat detection after parse</p>
           </div>
-
           <div className="bg-white rounded-lg shadow-md p-4 border border-blue-100">
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-green-100 rounded">
-                <Upload className="w-5 h-5 text-green-600" />
-              </div>
+              <div className="p-2 bg-green-100 rounded"><Upload className="w-5 h-5 text-green-600" /></div>
               <h3 className="font-semibold text-blue-900">Fast Upload</h3>
             </div>
             <p className="text-sm text-gray-600">Quick processing & analysis</p>

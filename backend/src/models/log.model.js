@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const LogSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   fileId: mongoose.Schema.Types.ObjectId,
   timestamp: { type: Date,  },
   severity: { type: String,  },  

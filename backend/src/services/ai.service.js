@@ -1,9 +1,17 @@
 
 import axios from "axios";
 
-// const AI_URL = "http://127.0.0.1:8000/analyze-simple";
-const AI_URL = "http://127.0.0.1:8000/analyze";
-
+// const AI_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000/analyze";
+// const AI_URL = process.env.AI_SERVICE_URL 
+//   ? `${process.env.AI_SERVICE_URL}/analyze`
+//   : "http://localhost:8001/analyze";
+// const AI_URL = process.env.AI_SERVICE_URL 
+//   ? `${process.env.AI_SERVICE_URL}/analyze`
+//   : "http://127.0.0.1:8000/analyze";
+// const AI_URL = "http://host.docker.internal:8000/analyze";
+const AI_URL = process.env.AI_SERVICE_URL 
+  ? `${process.env.AI_SERVICE_URL}/analyze`
+  : "http://127.0.0.1:8000/analyze";
 // Retry logic
 async function analyzeWithRetry(logs, retries = 3, delay = 1000) {
   while (retries > 0) {

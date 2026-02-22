@@ -184,7 +184,7 @@ const Register = () => {
 
   // Navigate back to login
   const handleBackToLogin = () => {
-    alert("Navigating to Login page...");
+    navigate('/login');
   };
 
   return (
@@ -224,10 +224,13 @@ const Register = () => {
                 <h2 className="text-2xl font-bold text-green-900 mb-2">
                   Registration Successful!
                 </h2>
-                <p className="text-green-700">
+                <p className="text-green-700 mb-6">
                   User account has been created successfully.
                 </p>
-
+                <div className="flex items-center justify-center gap-2 text-blue-600">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span className="text-sm font-medium">Redirecting to login...</span>
+                </div>
               </div>
             ) : (
               <div className="space-y-6">
@@ -461,7 +464,6 @@ const Register = () => {
                 Already have an account?{" "}
                 <Link
                   to="/login"
-                  onClick={handleBackToLogin}
                   className="font-medium text-blue-700 hover:text-blue-900 transition-colors duration-200"
                 >
                   Sign in

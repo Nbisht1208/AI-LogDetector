@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, FileText, AlertTriangle, Bell, Upload, RefreshCw, Activity } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip,
+  PieChart, Pie, Cell, ResponsiveContainer, Legend
+} from "recharts";
+import { Link, useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   const [stats, setStats] = useState({
     totalLogs: 0,
     errors: 0,
@@ -13,52 +19,54 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // STATS
+  const [ipData, setIpData] = useState([]);
+  const [severityData, setSeverityData] = useState([]);
+  const COLORS = ["#3b82f6", "#f59e0b", "#ef4444", "#00C49F"];
+
   // Fetch dashboard stats
+  const token = localStorage.getItem("token");
+  const headers = { Authorization: `Bearer ${token}` };
+
   const fetchStats = async () => {
     try {
-      // Simulated API call - replace with actual endpoint
-      // const response = await fetch('/api/logs/stats');
-      // const data = await response.json();
-      
-      // Demo data
-      const data = {
-        totalLogs: 15847,
-        errors: 342,
-        warnings: 1205,
-        aiAlerts: 23
-      };
-      setStats(data);
+      const res = await fetch("http://localhost:5000/api/v1/stats/dashboard", { headers });
+      const data = await res.json();
+      setStats({
+        totalLogs: data.totalLogs,
+        errors: data.severityDist.find(s => s._id === "ERROR")?.count || 0,
+        warnings: data.severityDist.find(s => s._id === "WARN")?.count || 0,
+        aiAlerts: data.totalAlerts  
+      });
+      const [ipRes, sevRes] = await Promise.all([
+        fetch("http://localhost:5000/api/v1/stats/by-ip", { headers }),
+        fetch("http://localhost:5000/api/v1/stats/severity", { headers })
+      ]);
+      const ipJson = await ipRes.json();
+      const sevJson = await sevRes.json();
+      setIpData(ipJson.map(d => ({ ip: d._id, count: d.count })));
+      setSeverityData(sevJson.map(d => ({ name: d._id, value: d.count })));
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error("Error fetching stats:", error);
     }
   };
 
   // Fetch recent logs
   const fetchLogs = async () => {
     try {
-      // Simulated API call - replace with actual endpoint
-      // const response = await fetch('/api/logs?limit=10');
-      // const data = await response.json();
-      
-      // Demo data
-      const data = [
-        { id: 1, timestamp: '2025-12-08 14:23:45', level: 'ERROR', message: 'Database connection timeout', source: 'api-service' },
-        { id: 2, timestamp: '2025-12-08 14:22:30', level: 'WARNING', message: 'High memory usage detected', source: 'web-server' },
-        { id: 3, timestamp: '2025-12-08 14:21:15', level: 'INFO', message: 'User authentication successful', source: 'auth-service' },
-        { id: 4, timestamp: '2025-12-08 14:20:05', level: 'ERROR', message: 'Failed to process payment', source: 'payment-gateway' },
-        { id: 5, timestamp: '2025-12-08 14:19:22', level: 'WARNING', message: 'API rate limit approaching', source: 'api-gateway' },
-        { id: 6, timestamp: '2025-12-08 14:18:40', level: 'INFO', message: 'Backup completed successfully', source: 'backup-service' },
-        { id: 7, timestamp: '2025-12-08 14:17:55', level: 'ERROR', message: 'File upload failed', source: 'storage-service' },
-        { id: 8, timestamp: '2025-12-08 14:16:30', level: 'INFO', message: 'Cache cleared', source: 'cache-manager' },
-        { id: 9, timestamp: '2025-12-08 14:15:10', level: 'WARNING', message: 'Slow query detected', source: 'database' },
-        { id: 10, timestamp: '2025-12-08 14:14:05', level: 'INFO', message: 'Service health check passed', source: 'monitoring' }
-      ];
-      setLogs(data);
+      const res = await fetch("http://localhost:5000/api/v1/logs?limit=10", { headers });
+      const data = await res.json();
+      setLogs(data.logs.map(log => ({
+        id: log._id,
+        timestamp: log.timestamp || log.createdAt,
+        level: log.severity || "INFO",
+        message: log.message,
+        source: log.ip || "unknown"
+      })));
     } catch (error) {
-      console.error('Error fetching logs:', error);
+      console.error("Error fetching logs:", error);
     }
   };
-
   // Initial load
   useEffect(() => {
     const loadData = async () => {
@@ -77,10 +85,11 @@ const Dashboard = () => {
   };
 
   // Navigate to upload page
+
   const handleUpload = () => {
-    // Replace with actual navigation
-    alert('Redirecting to File Upload page...');
+    navigate('/LogUpload');
   };
+
 
   const getLevelColor = (level) => {
     switch (level) {
@@ -202,7 +211,7 @@ const Dashboard = () => {
             <div className="flex-1">
               <h3 className="text-xl font-bold mb-2">AI Insights</h3>
               <p className="text-blue-100 mb-4">
-                System analysis shows increased error rate in payment-gateway service over the last hour. 
+                System analysis shows increased error rate in payment-gateway service over the last hour.
                 Recommend investigating database connection pool settings.
               </p>
               <button className="px-4 py-2 bg-white text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors duration-200">
@@ -212,12 +221,46 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+          {/* Top IPs Bar Chart */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-blue-100">
+            <h2 className="text-xl font-bold text-blue-900 mb-4">🌐 Top IPs</h2>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={ipData}>
+                <XAxis dataKey="ip" tick={{ fontSize: 10 }} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Severity Pie Chart */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-blue-100">
+            <h2 className="text-xl font-bold text-blue-900 mb-4">⚠️ Severity Distribution</h2>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie data={severityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                  {severityData.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+        </div>
+
         {/* Recent Logs Table */}
         <div className="bg-white rounded-xl shadow-lg border border-blue-100 overflow-hidden">
           <div className="p-6 border-b border-blue-100">
             <h2 className="text-xl font-bold text-blue-900">Last 10 Logs</h2>
           </div>
-          
+
           {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
@@ -263,9 +306,10 @@ const Dashboard = () => {
           </div>
 
           <div className="p-4 bg-blue-50 text-center">
-            <button className="text-blue-600 font-medium hover:text-blue-800 transition-colors duration-200">
+            <Link to="/Logs" className="text-blue-600 font-medium hover:text-blue-800 transition-colors duration-200">
               View All Logs →
-            </button>
+            </Link>
+
           </div>
         </div>
       </div>

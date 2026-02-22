@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, Filter, RefreshCw, ChevronLeft, ChevronRight, Calendar, AlertCircle, AlertTriangle, Info, Server, User, Globe, Clock, X, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const LogsList = () => {
+  const navigate = useNavigate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,12 +52,11 @@ const LogsList = () => {
       if (filters.dateTo) params.append('dateTo', filters.dateTo);
       if (filters.search) params.append('search', filters.search);
 
-      const token = sessionStorage.getItem("token"); // or localStorage
-
+      const token = localStorage.getItem("token");
       const res = await axios.get(
-        `http://localhost:5000/api/v1/logs`,
+        `http://localhost:5000/api/v1/logs?${params}`,
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
 
@@ -98,9 +99,9 @@ const LogsList = () => {
 
       console.log("LOGS RESPONSE:", res.data); // add this
 
-    setLogs(res.data.logs);
-    setTotalLogs(res.data.totalLogs);
-    setTotalPages(res.data.totalPages);
+      setLogs(res.data.logs);
+      setTotalLogs(res.data.totalLogs);
+      setTotalPages(res.data.totalPages);
 
     } catch (error) {
       console.error('Error fetching logs:', error);
@@ -472,8 +473,11 @@ const LogsList = () => {
                   const SeverityIcon = config.icon;
 
                   return (
-                    <tr key={log.id} className="hover:bg-blue-50 transition-colors duration-150">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <tr
+                      key={log._id}
+                      onClick={() => navigate(`/LogDetail/${log._id}`)}
+                      className="hover:bg-blue-50 cursor-pointer transition-colors duration-150"
+                    >                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {formatTimestamp(log.timestamp)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -500,7 +504,11 @@ const LogsList = () => {
               const SeverityIcon = config.icon;
 
               return (
-                <div key={log.id} className="p-4 hover:bg-blue-50 transition-colors duration-150">
+                <div
+                  key={log._id}
+                  onClick={() => navigate(`/LogDetail/${log._id}`)}
+                  className="p-4 hover:bg-blue-50 cursor-pointer transition-colors duration-150"
+                >
                   <div className="flex items-center justify-between mb-3">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.color} border ${config.border}`}>
                       <SeverityIcon className="w-3.5 h-3.5" />
@@ -564,8 +572,8 @@ const LogsList = () => {
                         key={i}
                         onClick={() => setCurrentPage(pageNum)}
                         className={`w-10 h-10 rounded-lg font-medium transition-all duration-200 ${currentPage === pageNum
-                            ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
-                            : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
+                          ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                          : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
                           }`}
                       >
                         {pageNum}

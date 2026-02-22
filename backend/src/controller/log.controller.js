@@ -2,14 +2,13 @@ import LogFile from "../models/LogFile.model.js";
 import { parseLogFile, extractMetadata } from "../utilis/parseLog.js";
 import { analyzeWithRetry } from "../services/ai.service.js";
 import Log from "../models/log.model.js";
-
-
+import Alert from "../models/alert.model.js";
 
 // Upload log
 export const uploadLog = async (req, res) => {
   try {
     const file = req.file;
-    const userId = req.user.id; // from JWT middleware
+    const userId = req.user.id;
 
     const log = await LogFile.create({
       filename: file.filename,
@@ -41,6 +40,7 @@ export const parseLog = async (req, res) => {
 
       await Log.create({
         fileId: fileId,
+        userId: req.user.id,
         timestamp: meta.timestamp ? new Date(meta.timestamp) : null,
         severity: meta.severity,
         ip: meta.ip,
@@ -50,7 +50,6 @@ export const parseLog = async (req, res) => {
         rawLine: line
       });
 
-      // console.log(metadata); // later: save metadata to DB
       parsedLines++;
     });
 
@@ -69,7 +68,6 @@ export const parseLog = async (req, res) => {
 export const getFileStatus = async (req, res) => {
   const { fileId } = req.params;
   const file = await LogFile.findById(fileId);
-
   if (!file) return res.status(404).json({ msg: "File not found" });
 
   res.json({
@@ -79,9 +77,16 @@ export const getFileStatus = async (req, res) => {
   });
 };
 
+// Get uploaded files
+export const getFiles = async (req, res) => {
+  const files = await LogFile.find({ userId: req.user.id });
+  res.json(files);
+};
 
+// Analyze logs with AI + Auto create alerts
 export const analyzeLogs = async (req, res) => {
   try {
+    
     const { fileId } = req.params;
     const logs = await Log.find({ fileId }).limit(100);
 
@@ -95,35 +100,25 @@ export const analyzeLogs = async (req, res) => {
     }));
 
     const result = await analyzeWithRetry(formatted);
-    res.json({ success: true, ai: result });
 
+    // Auto create alerts for suspicious logs
+    const alertPromises = result.results
+      .filter(r => r.is_suspicious)
+      .map(r => Alert.create({
+        userId: req.user.id,
+        fileId,
+        ip: r.ip,
+        severity: r.ai_analysis?.severity || "Medium",
+        threatType: r.ai_analysis?.threat_type || r.detection_details?.attack_type || "Unknown",
+        message: r.message,
+        explanation: r.ai_analysis?.explanation || "Anomaly detected",
+        recommendedAction: r.ai_analysis?.recommended_action || "Manual review"
+      }));
+
+    await Promise.all(alertPromises);
+
+    res.json({ success: true, ai: result });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
-
-// Analyze logs with AI
-// export const analyzeLogs = async (req, res, next) => {
-//   try {
-//     const logs = await Log.find().limit(100);
-
-//     const result = await analyzeWithAI(logs);
-
-//     res.json({
-//       success: true,
-//       ai: result,
-//     });
-//   } catch (err) {
-//     console.error("analyzeLogs error:", err);
-
-//     // custom status code
-//     const status = err.statusCode || 500;
-
-//     res.status(status).json({
-//       success: false,
-//       message: err.message || "Something went wrong while analyzing logs",
-//     });
-
-//   }
-// };
