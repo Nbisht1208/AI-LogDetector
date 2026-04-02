@@ -1,35 +1,44 @@
 # AI Log Analyzer
 
-AI Log Analyzer is a full-stack log analysis platform that combines a React/Vite frontend, an Express/MongoDB backend, and a Python FastAPI AI service for anomaly detection.
+AI Log Analyzer is a production-ready log monitoring platform that integrates a modern React frontend, an Express/MongoDB backend, and a Python FastAPI AI service for anomaly detection and threat insight.
 
-## Project Structure
+## 🚀 Overview
 
-- `backend/` - Node.js Express API for authentication, log storage, uploads, analysis, alerts, and statistics
-- `frontend/` - React + Vite web UI for login, log upload, dashboard, alerts, and AI-driven insights
-- `ai-service/` - Python FastAPI microservice for AI-based anomaly detection and enhanced log analysis
-- `docker-compose.yml` - Local multi-service orchestration for backend, frontend, and AI service
+This repository contains a complete full-stack solution for:
 
-## Technology Stack
+- Uploading and parsing log files
+- Detecting anomalies with both rule-based and AI-enhanced workflows
+- Managing alerts and security incidents
+- Displaying analytics through a responsive dashboard
+
+## 📁 Project Structure
+
+- `backend/` — Node.js Express API for authentication, log storage, upload parsing, analytics, and alert management
+- `frontend/` — React + Vite web application with dashboards, log views, and AI insights
+- `ai-service/` — Python FastAPI microservice responsible for ML/AI-driven anomaly detection
+- `docker-compose.yml` — Multi-service definition for local development and deployment
+
+## 🧰 Technology Stack
 
 - Frontend: React, Vite, Tailwind CSS, React Router, Axios
 - Backend: Node.js, Express, MongoDB, Mongoose, JWT, Multer, Helmet, CORS
 - AI Service: Python, FastAPI, Uvicorn, scikit-learn, python-dotenv
 - Containerization: Docker Compose
 
-## Service Ports
+## 🔌 Service Endpoints
 
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:5000`
 - AI Service: `http://localhost:8000`
 
-## Getting Started
+## ⚙️ Setup
 
 ### Prerequisites
 
 - Node.js 18+
 - npm
 - Python 3.11+
-- Docker & Docker Compose (optional but recommended)
+- Docker & Docker Compose (recommended)
 
 ### Local Development
 
@@ -57,68 +66,66 @@ pip install -r requirement.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-> The backend expects the AI service to be available at `http://host.docker.internal:8000` when running inside Docker.
+> When running inside Docker, the backend is configured to call the AI service at `http://host.docker.internal:8000`.
 
-### Docker Compose
-
-Use Docker Compose to build and run all services together:
+### Run All Services with Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-## Backend API Overview
+## 🔐 Backend API Summary
 
-The backend exposes the following main API groups:
+### Authentication
 
-- `POST /api/auth/register` - Register a new user
-- `POST /api/auth/login` - Authenticate user and issue JWT
-- `GET /api/auth/me` - Get current user profile
+- `POST /api/auth/register` — Register a new user
+- `POST /api/auth/login` — User login and JWT issuance
+- `GET /api/auth/me` — Retrieve current user profile
 
-- `POST /api/v1/logs/upload` - Upload a log file (authenticated)
-- `POST /api/v1/logs/parse/:fileId` - Parse an uploaded log file
-- `GET /api/v1/logs/file-status/:fileId` - Check file processing status
-- `POST /api/v1/logs/analyze/:fileId` - Analyze parsed logs
+### Log Upload & Analysis
 
-- `GET /api/v1/logs` - Get saved logs
-- `GET /api/v1/logs/search` - Search logs
-- `GET /api/v1/logs/:id` - Get log record by ID
-- `DELETE /api/v1/logs/:id` - Delete a single log
-- `DELETE /api/v1/logs` - Bulk delete logs
+- `POST /api/v1/logs/upload` — Upload a log file (authenticated)
+- `POST /api/v1/logs/parse/:fileId` — Parse a log file
+- `GET /api/v1/logs/file-status/:fileId` — Check parsing status
+- `POST /api/v1/logs/analyze/:fileId` — Analyze parsed logs
 
-- `GET /api/v1/alerts` - List alerts
-- `GET /api/v1/alerts/stats` - Get alert statistics
-- `POST /api/v1/alerts` - Create an alert
-- `PATCH /api/v1/alerts/:id/resolve` - Resolve an alert
-- `DELETE /api/v1/alerts/:id` - Delete an alert
+### Log Storage
 
-- `GET /api/v1/stats/dashboard` - Dashboard statistics
-- `GET /api/v1/stats/by-ip` - Logs grouped by IP
-- `GET /api/v1/stats/severity` - Severity statistics
-- `GET /api/v1/stats/timeseries` - Time-series log stats
+- `GET /api/v1/logs` — Retrieve stored logs
+- `GET /api/v1/logs/search` — Search logs
+- `GET /api/v1/logs/:id` — Get log details by ID
+- `DELETE /api/v1/logs/:id` — Delete a log entry
+- `DELETE /api/v1/logs` — Bulk delete logs
 
-## AI Service Endpoints
+### Alerts
 
-The AI service provides advanced log analysis endpoints:
+- `GET /api/v1/alerts` — Get active alerts
+- `GET /api/v1/alerts/stats` — Fetch alert statistics
+- `POST /api/v1/alerts` — Create a new alert
+- `PATCH /api/v1/alerts/:id/resolve` — Resolve an alert
+- `DELETE /api/v1/alerts/:id` — Delete an alert
 
-- `GET /` - Health check
-- `POST /analyze` - AI-enhanced anomaly analysis with detailed detection metadata
-- `POST /analyze-simple` - Fast rule-based anomaly analysis without AI explanation
+### Analytics
 
-## Installation Notes
+- `GET /api/v1/stats/dashboard` — Dashboard metrics
+- `GET /api/v1/stats/by-ip` — Logs grouped by IP
+- `GET /api/v1/stats/severity` — Severity distribution
+- `GET /api/v1/stats/timeseries` — Log event trends
 
-- Backend dependencies are managed in `backend/package.json`
-- Frontend dependencies are managed in `frontend/package.json`
-- AI service Python dependencies are managed in `ai-service/requirement.txt`
+## 🤖 AI Service Endpoints
 
-## Environment Configuration
+- `GET /` — Health check
+- `POST /analyze` — AI-enhanced anomaly detection with metadata and explanations
+- `POST /analyze-simple` — Lightweight rule-based anomaly detection
 
-Create service-level `.env` files as needed for:
+## 📝 Environment Configuration
 
-- `backend` - MongoDB connection string, JWT secret, and other runtime values
-- `ai-service` - AI service environment variables
+Create `.env` files for each service as required:
 
-## Testing
+- `backend/` — MongoDB connection string, JWT secret, and other backend settings
+- `ai-service/` — AI service environment variables
+
+## ✅ Testing
 
 ### Backend
 
@@ -127,14 +134,8 @@ cd backend
 npm test
 ```
 
-## Development Tips
+## 💡 Notes
 
-- The frontend and backend are configured to run independently in development.
-- Docker Compose is the easiest way to run the full stack together.
-- Use authenticated routes for log management, alerting, and statistics.
-
-## Notes
-
-- The project combines ML/AI-powered log anomaly detection with a full web-based observability workflow.
-- The backend includes log upload parsing, storage, alert handling, and dashboard analytics.
-- The AI service is designed to be its own microservice and can be extended with additional detection models.
+- The frontend and backend can run independently in development.
+- Docker Compose is the recommended approach for running the full stack locally.
+- The AI service is designed as a separate microservice so it can be extended independently.
